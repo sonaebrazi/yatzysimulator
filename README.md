@@ -1,0 +1,2 @@
+# yatzysimulator
+simulating yatzy game
