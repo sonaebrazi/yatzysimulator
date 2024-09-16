@@ -1,16 +1,15 @@
 package com.example.yatzysimulator.dto;
 
-import jdk.jfr.DataAmount;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ScoreRequest {
+public class ScoreOfCategories {
+
     private int category;
-    private String token;
+    private  int score;
 }
