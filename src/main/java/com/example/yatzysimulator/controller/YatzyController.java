@@ -1,12 +1,12 @@
 package com.example.yatzysimulator.controller;
 
+import com.example.yatzysimulator.dto.DiceResponse;
+import com.example.yatzysimulator.dto.ScoreOfCategories;
 import com.example.yatzysimulator.dto.ScoreRequest;
+import com.example.yatzysimulator.dto.SumOfScoreAndListedCategoryScore;
 import com.example.yatzysimulator.service.YatzyService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -15,14 +15,19 @@ public class YatzyController {
     @Autowired
     private YatzyService service;
 
-    @GetMapping("roll")
-    public List<Integer> roll(){
-        return service.rollDice();
+    @GetMapping("roll/{token}")
+    public @ResponseBody DiceResponse roll(@PathVariable String token){
+        return service.rollDice(token);
     }
     @PostMapping("roll")
     public int scoreCalculation(@RequestBody ScoreRequest request){
        return service.scoreCalculation(request);
 
+    }
+
+    @GetMapping("scores/{token}")
+    public @ResponseBody SumOfScoreAndListedCategoryScore getScores(@PathVariable String token){
+        return service.getScore(token);
     }
 
 
