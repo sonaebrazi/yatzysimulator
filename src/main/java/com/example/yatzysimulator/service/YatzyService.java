@@ -1,15 +1,14 @@
 package com.example.yatzysimulator.service;
 
-import com.example.yatzysimulator.dto.DiceResponse;
-import com.example.yatzysimulator.dto.ScoreOfCategories;
-import com.example.yatzysimulator.dto.ScoreRequest;
-import com.example.yatzysimulator.dto.SumOfScoreAndListedCategoryScore;
+import com.example.yatzysimulator.dto.DiceResponseDto;
+import com.example.yatzysimulator.dto.CategoryScoreDto;
+import com.example.yatzysimulator.dto.ScoreRequestDto;
+import com.example.yatzysimulator.dto.ScoreResponseDto;
 import com.example.yatzysimulator.entity.CategoryScores;
 import com.example.yatzysimulator.entity.DiceValue;
 import com.example.yatzysimulator.repository.CategoryScoreRepository;
 import com.example.yatzysimulator.repository.DiceRollRepository;
-import com.sun.source.tree.BreakTree;
-import org.apache.tomcat.util.collections.CaseInsensitiveKeyMap;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +25,7 @@ public class YatzyService {
     private final int numOfDices = 5;
     private Random random = new Random();
 
-    public DiceResponse rollDice(String token) {
+    public DiceResponseDto rollDice(String token) {
 
         List<Integer> diceRolls = new ArrayList<>();
         for (int i = 0; i < numOfDices; i++) {
@@ -34,7 +33,6 @@ public class YatzyService {
             diceRolls.add(diceNum);
         }
 
-        String tok = token;
         DiceValue diceValues = new DiceValue(
                 null,
                 diceRolls.get(0),
@@ -42,24 +40,19 @@ public class YatzyService {
                 diceRolls.get(2),
                 diceRolls.get(3),
                 diceRolls.get(4),
-                tok
+                token
         );
 
         diceRepo.save(diceValues);
-        System.out.println("new values  " + diceValues);
-
-        DiceResponse diceResponse = new DiceResponse(diceRolls, tok);
+        DiceResponseDto diceResponse = new DiceResponseDto(diceRolls, token);
         return diceResponse;
     }
 
-    public int scoreCalculation(ScoreRequest request) {
+    public int scoreCalculation(ScoreRequestDto request) {
 
         int category = request.getCategory();
         String token = request.getToken();
-
-
         DiceValue rolls = diceRepo.findByToken(token);
-
         if (rolls == null) {
             throw new IllegalArgumentException("No dice rolls found for token: " + token);
         }
@@ -69,10 +62,7 @@ public class YatzyService {
         diceValueList.add(rolls.getDice3());
         diceValueList.add(rolls.getDice4());
         diceValueList.add(rolls.getDice5());
-
-
         int score = 0;
-
         switch (category) {
             case 1:
             case 2:
@@ -112,11 +102,10 @@ public class YatzyService {
                 break;
         }
 
-
         List<CategoryScores> existingscores = scoreRepo.findByTokenAndCategory(token, category);
 
         if (!(existingscores.isEmpty())) {
-            System.out.println("category " + category + " is already filled! choose another category");
+            throw new IllegalArgumentException("Category " + category + " is already filled! Choose another category.");
         } else {
 
             CategoryScores scores = new CategoryScores(null, category, token, score);
@@ -128,122 +117,75 @@ public class YatzyService {
 
     private int yatzy(List<Integer> values) {
         int checker = values.get(0);
-        for (int i = 1; i < numOfDices; i++) {
-            if (values.get(i) != checker) {
-                return 0;
-            }
-        }
-        return 50;
+        boolean allSame = values.stream()
+                .allMatch(value -> value==checker);
+        return allSame ? 50 : 0;
     }
 
     private int largeStraight(List<Integer> values) {
-        values.sort(Comparator.naturalOrder());
-        for (int i = 0; i < numOfDices; i++) {
-            if (values.get(i) != i + 2) {
-                return 0;
-            }
-        }
-        return 50;
+        List<Integer> largStraight = Arrays.asList(2,3,4,5,6);
+        return values.stream()
+                .sorted()
+                .equals(largStraight) ? 50 : 0;
     }
 
     private int smallStraight(List<Integer> values) {
-        values.sort(Comparator.naturalOrder());
-        for (int i = 0; i < numOfDices; i++) {
-            if (values.get(i) != i + 1) {
-                return 0;
-            }
-        }
-        return 45;
+        List<Integer> smallStraight = Arrays.asList(1,2,3,4,5);
+        return values.stream()
+                .sorted()
+                .equals(smallStraight) ? 45 : 0;
     }
 
     private int tripleFiveDoubleSix(List<Integer> values) {
-        int counter5 = 0;
-        int counter6 = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            int dice = values.get(i);
-            if (dice == 6 && counter6 < 2) {
-                counter6++;
-            } else if (dice == 5 && (counter5 < 3)) {
-                counter5++;
-
-            }
-        }
-
-        if (counter6 == 2 && counter5 == 3) {
-            return 27;
-        } else return 0;
+        long count5 = values.stream()
+                .filter(value -> value==5)
+                .count();
+        long count6 = values.stream()
+                .filter(value -> value==6)
+                .count();
+        return (count5==3 && count6==2) ? 27 : 0;
     }
 
-    private int quadFives(List<Integer> vaues) {
-        int counter = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            if (vaues.get(i) == 5) {
-                counter++;
-                if (counter == 4) {
-                    return 20;
-                }
-            }
-        }
-        return 0;
+    private int quadFives(List<Integer> values) {
+        long count = values.stream()
+                .filter(value -> value==5)
+                .count();
+        return count>=4 ? 20 : 0;
     }
 
     private int tripleSix(List<Integer> values) {
-        int counter = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            if (values.get(i) == 6) {
-                counter++;
-                if (counter == 3) {
-                    return 18;
-                }
-            }
-        }
-        return 0;
+        long count = values.stream()
+                .filter(value -> value==6)
+                .count();
+        return count>=3 ? 18 : 0;
     }
 
-
     private int doubleSixDoubleFive(List<Integer> values) {
-        int counter5 = 0;
-        int counter6 = 0;
-        int sum = 0;
-        for (int i = 0; i < numOfDices; i++) {
-
-            int dice = values.get(i);
-            if (dice == 6 && counter6 < 2) {
-                counter6++;
-            } else if (dice == 5 && (counter5 < 2)) {
-                counter5++;
-
-            }
-        }
-
-        if (counter6 == 2 && counter5 == 2) {
-            return 22;
-        } else return 0;
-
+        long count6=values.stream()
+                .filter(value -> value ==6)
+                .count();
+        long count5=values.stream()
+                .filter(value -> value ==5)
+                .count();
+        return (count5>= 2 && count6>=2) ? 22 : 0;
     }
 
     private int doubleSix(List<Integer> values) {
-        int counter = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            if (values.get(i) == 6) {
-                counter++;
-                if (counter == 2) {
-                    return 12;
-                }
-            }
-        }
-        return 0;
+        long count = values.stream()
+                .filter(value -> value==6)
+                .count();
+        return count>=2 ? 12 : 0;
     }
 
-    public SumOfScoreAndListedCategoryScore getScore(String token) {
+    public ScoreResponseDto getScore(String token) {
         int totalScore=0;
-        List<ScoreOfCategories> result = new ArrayList<>();
+        List<CategoryScoreDto> result = new ArrayList<>();
         List<CategoryScores> categoryScoresList = scoreRepo.findByToken(token);
         for (CategoryScores c : categoryScoresList) {
-            result.add(new ScoreOfCategories(c.getCategory(), c.getScore()));
+            result.add(new CategoryScoreDto(c.getCategory(), c.getScore()));
             totalScore=totalScore+(c.getScore());
         }
-        return (new SumOfScoreAndListedCategoryScore(result,totalScore));
+        return (new ScoreResponseDto(result,totalScore));
     }
 }
 

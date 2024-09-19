@@ -1,6 +1,5 @@
 package com.example.yatzysimulator.repository;
 
-import com.example.yatzysimulator.dto.ScoreRequest;
 import com.example.yatzysimulator.entity.CategoryScores;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

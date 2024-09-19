@@ -5,10 +5,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SumOfScoreAndListedCategoryScore {
-    private List<ScoreOfCategories> scoreCategoryList;
-    private int totalScore;
+public class DiceResponseDto {
+
+    private List<Integer> diceValues;
+    private String token;
 }
