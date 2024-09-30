@@ -1,14 +1,12 @@
 package com.example.yatzysimulator.service;
 
-import com.example.yatzysimulator.dto.DiceResponseDto;
-import com.example.yatzysimulator.dto.CategoryScoreDto;
-import com.example.yatzysimulator.dto.ScoreRequestDto;
-import com.example.yatzysimulator.dto.ScoreResponseDto;
+import com.example.yatzysimulator.dto.*;
 import com.example.yatzysimulator.entity.CategoryScores;
 import com.example.yatzysimulator.entity.DiceValue;
+import com.example.yatzysimulator.entity.Player;
 import com.example.yatzysimulator.repository.CategoryScoreRepository;
 import com.example.yatzysimulator.repository.DiceRollRepository;
-import jakarta.persistence.criteria.CriteriaBuilder;
+import com.example.yatzysimulator.repository.PlayerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,10 +20,17 @@ public class YatzyService {
     @Autowired
     private CategoryScoreRepository scoreRepo;
 
+    @Autowired
+    private PlayerRepository playerRepo;
+
     private final int numOfDices = 5;
     private Random random = new Random();
 
     public DiceResponseDto rollDice(String token) {
+        List<DiceValue> foundRolls = diceRepo.findByTokenAndCategoryIsNull(token);
+        if (foundRolls.size()>1) {
+            throw new IllegalArgumentException("more than one category is null");
+        }
 
         List<Integer> diceRolls = new ArrayList<>();
         for (int i = 0; i < numOfDices; i++) {
@@ -40,28 +45,57 @@ public class YatzyService {
                 diceRolls.get(2),
                 diceRolls.get(3),
                 diceRolls.get(4),
-                token
+                token,
+                null
         );
-
         diceRepo.save(diceValues);
         DiceResponseDto diceResponse = new DiceResponseDto(diceRolls, token);
         return diceResponse;
     }
 
-    public int scoreCalculation(ScoreRequestDto request) {
+    public ScoreValueDto scoreCalculation(ScoreRequestDto request) {
 
         int category = request.getCategory();
         String token = request.getToken();
-        DiceValue rolls = diceRepo.findByToken(token);
-        if (rolls == null) {
-            throw new IllegalArgumentException("No dice rolls found for token: " + token);
+
+        //check if the category-score table has been filled for the given token
+        List<CategoryScores> existingScores=scoreRepo.findByTokenAndCategory(token,category);
+        if(!existingScores.isEmpty()){
+            throw new IllegalArgumentException("category "+category+" is filled already with the score");
         }
+
+        //find rolls that have not category
+        List<DiceValue> foundRolls = diceRepo.findByTokenAndCategoryIsNull(token);
+        if (foundRolls.size()== 0) {
+            throw new IllegalArgumentException("no dice rolls found for token or category");
+        }else if(foundRolls.size()>1){
+            throw new IllegalArgumentException("multiple null categories!");
+        }
+
+        //saving category in roll-dice table
+        DiceValue rolls = foundRolls.get(0);
+        setCategory(rolls,category, token);
+
+        // Extract the DiceValue object from Optional
         List<Integer> diceValueList = new ArrayList<>();
         diceValueList.add(rolls.getDice1());
         diceValueList.add(rolls.getDice2());
         diceValueList.add(rolls.getDice3());
         diceValueList.add(rolls.getDice4());
         diceValueList.add(rolls.getDice5());
+        
+        //Calculate score based on the provided category
+        int score = calculateScoreForCategory(category, diceValueList);
+
+        //Save the score
+        CategoryScores scores = new CategoryScores(null, category, token, score);
+        scoreRepo.save(scores);
+
+        // Return the score as a DTO
+        return new ScoreValueDto(score);
+    }
+
+    private int calculateScoreForCategory(int category, List<Integer> diceValueList) {
         int score = 0;
         switch (category) {
             case 1:
@@ -100,18 +134,9 @@ public class YatzyService {
             case 14:
                 score = yatzy(diceValueList);
                 break;
+            default:
+                throw new IllegalArgumentException("Invalid category: " + category);
         }
-
-        List<CategoryScores> existingscores = scoreRepo.findByTokenAndCategory(token, category);
-
-        if (!(existingscores.isEmpty())) {
-            throw new IllegalArgumentException("Category " + category + " is already filled! Choose another category.");
-        } else {
-
-            CategoryScores scores = new CategoryScores(null, category, token, score);
-            scoreRepo.save(scores);
-        }
-
         return score;
     }
 
@@ -123,10 +148,10 @@ public class YatzyService {
     }
 
     private int largeStraight(List<Integer> values) {
-        List<Integer> largStraight = Arrays.asList(2,3,4,5,6);
+        List<Integer> largeStraight = Arrays.asList(2,3,4,5,6);
         return values.stream()
                 .sorted()
-                .equals(largStraight) ? 50 : 0;
+                .equals(largeStraight) ? 50 : 0;
     }
 
     private int smallStraight(List<Integer> values) {
@@ -187,5 +212,26 @@ public class YatzyService {
         }
         return (new ScoreResponseDto(result,totalScore));
     }
+
+    public List<PlayerTotalScoreDto> findCompletedGames() {
+        List<PlayerTotalScoreDto>  comletedGame= scoreRepo.findPlayersWith14Rolls();
+        return comletedGame;
+    }
+
+    public StartGameDto createPlayer(String name) {
+        String token = UUID.randomUUID().toString();
+        Player player= new Player();
+        player.setToken(token);
+        player.setName(name);
+        playerRepo.save(player);
+        return new StartGameDto(token);
+    }
+
+    public void setCategory(DiceValue rolls,int category,String token){
+        rolls.setCategory(category);
+        diceRepo.save(rolls);
+    }
+
+
 }
 

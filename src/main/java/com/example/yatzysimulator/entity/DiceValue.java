@@ -31,6 +31,11 @@ public class DiceValue {
     @Column(name = "dice5")
     private int dice5;
 
-    @Column(unique = true)
+    @Column(name = "token", nullable = false)
     private String token;
+
+    @Column(name = "category", nullable = true)
+    private Integer category;
+
+
 }
