@@ -10,13 +10,13 @@ import java.util.List;
 
 @Repository
 public interface CategoryScoreRepository extends JpaRepository<CategoryScores,Integer> {
-      List<CategoryScores> findByTokenAndCategory(String token, int category);
+      CategoryScores findByTokenAndCategory(String token, int category);
       List<CategoryScores> findByToken(String token);
 
       @Query("SELECT new com.example.yatzysimulator.dto.PlayerTotalScoreDto(p.token, p.name, SUM(c.score)) " +
               "FROM CategoryScores c " +
               "JOIN Player p ON c.token = p.token " +
               "GROUP BY p.token, p.name " +
-              "HAVING COUNT(c) = 6")
+              "HAVING COUNT(c) = 14")
       List<PlayerTotalScoreDto> findPlayersWith14Rolls();
 }

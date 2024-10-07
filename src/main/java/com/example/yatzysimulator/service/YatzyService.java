@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class YatzyService {
@@ -55,28 +56,28 @@ public class YatzyService {
 
     public ScoreValueDto scoreCalculation(ScoreRequestDto request) {
 
+        //extract category and score from the request
         int category = request.getCategory();
         String token = request.getToken();
 
         //check if the category-score table has been filled for the given token
-        List<CategoryScores> existingScores=scoreRepo.findByTokenAndCategory(token,category);
-        if(!existingScores.isEmpty()){
+        CategoryScores existingScore=scoreRepo.findByTokenAndCategory(token,category);
+        if(existingScore != null){
             throw new IllegalArgumentException("category "+category+" is filled already with the score");
         }
 
-        //find rolls that have not category
+        //find rolls that have null category in dice-roll table
         List<DiceValue> foundRolls = diceRepo.findByTokenAndCategoryIsNull(token);
         if (foundRolls.size()== 0) {
             throw new IllegalArgumentException("no dice rolls found for token or category");
         }else if(foundRolls.size()>1){
             throw new IllegalArgumentException("multiple null categories!");
         }
-
         //saving category in roll-dice table
         DiceValue rolls = foundRolls.get(0);
         setCategory(rolls,category, token);
 
-        // Extract the DiceValue object from Optional
+        // Extract the DiceValues to use for score calculation
         List<Integer> diceValueList = new ArrayList<>();
         diceValueList.add(rolls.getDice1());
         diceValueList.add(rolls.getDice2());
@@ -149,16 +150,18 @@ public class YatzyService {
 
     private int largeStraight(List<Integer> values) {
         List<Integer> largeStraight = Arrays.asList(2,3,4,5,6);
-        return values.stream()
+        List<Integer> sortedValues= values.stream()
                 .sorted()
-                .equals(largeStraight) ? 50 : 0;
+                .collect(Collectors.toList());
+                return sortedValues.equals(largeStraight) ? 50 : 0;
     }
 
     private int smallStraight(List<Integer> values) {
         List<Integer> smallStraight = Arrays.asList(1,2,3,4,5);
-        return values.stream()
+        List<Integer> sortedValues= values.stream()
                 .sorted()
-                .equals(smallStraight) ? 45 : 0;
+                .collect(Collectors.toList());
+        return sortedValues.equals(smallStraight) ? 45 : 0;
     }
 
     private int tripleFiveDoubleSix(List<Integer> values) {

@@ -12,9 +12,10 @@ $(document).ready(function() {
                 url: '/start-game/'+encodeURIComponent(playerName), // Encoding the player name,
                 method: 'GET',
                 success: function(response) {
-                    $('#tokenDisplay').text("your token is: "+response.token);
+                    $('#tokenDisplay').text(response.token);
                     $('#roll-token').val(response.token); // Automatically fill the roll dice form with the token
                     $('#category-token').val(response.token) //Automatically fill the calculation form with token
+                    $('#scores-token').val(response.token) //Automatically fill the scores list form with token
                 },
                 error: function() {
                     alert("Error starting game.");
@@ -29,12 +30,16 @@ $(document).ready(function() {
 
             var token = $('#roll-token').val(); // Get the token value
             $.ajax({
-                url: '/roll-dice/' + encodeURIComponent(token), // Include the token and category in the URL path
+                url: '/roll-dice/' + encodeURIComponent(token), // Include the token in the URL path
                 method: 'GET',
                 success: function(response) {
-                    $('#dice-values').empty(); // Clear previous dice values
+                    // Clear previous dice images
+                    $('#dice-images').empty();
+
+                    // Loop through each dice value in the response and append the corresponding image
                     response.diceValues.forEach(function(value) {
-                        $('#dice-values').append('<li>' + value + '</li>'); // Display each dice value
+                        var diceImage = '<img src="images/dice/dice' + value + '.png" alt="Dice ' + value + '" width="50" height="50">';
+                        $('#dice-images').append(diceImage);
                     });
                 },
                 error: function(xhr, status, error) {
@@ -47,7 +52,7 @@ $(document).ready(function() {
     });
 
     // Handle scores form submission
-    $('#scores-form').on('submit', function(event) {
+    $('#viewScoresButton').on('click', function(event) {
         event.preventDefault(); // Prevent the default form submission
 
         var token = $('#scores-token').val(); // Get the token value
@@ -87,6 +92,9 @@ $(document).ready(function() {
                             contentType: 'application/json', // Set content type to JSON
                             success: function(response) {
                                 $('#category-score').text(response.score); // Update the category score
+                                $('#viewScoresButton').click()
+                                // Clear the category input field after successful submission
+                                $('#category').val(''); // Reset the input field to empty
                             },
                             error: function(xhr, status, error) {
                                 console.log('Error:', status, error);

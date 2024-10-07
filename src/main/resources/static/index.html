@@ -9,117 +9,141 @@
     <script src="js/script.js" defer></script> <!-- Link to your JavaScript file -->
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
+    font-family: 'Roboto', sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
 
-        h1 {
-            text-align: center;
-            color: #4CAF50;
-        }
+h1 {
+    text-align: center;
+    color: #4CAF50;
+}
 
-        h2 {
-            color: #333;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 5px;
-        }
+h2 {
+    color: #333;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 5px;
+}
 
-        label {
-            font-weight: 500;
-            margin-right: 10px;
-        }
+label {
+    font-weight: 500;
+    margin-right: 10px;
+}
 
-        input[type="text"], input[type="number"] {
-            padding: 8px;
-            width: 200px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
+input[type="text"], input[type="number"] {
+    padding: 8px;
+    width: 200px;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
 
-        button {
-            padding: 10px 15px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
+button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
 
-        button:hover {
-            background-color: #45a049;
-        }
+button:hover {
+    background-color: #45a049;
+}
 
-        #tokenDisplay {
-            font-weight: bold;
-            color: #FF5722;
-        }
+#tokenDisplay {
+    font-weight: bold;
+    color: #FF5722;
+}
 
-        form {
-            margin-bottom: 20px;
-        }
+form {
+    margin-bottom: 20px;
+}
 
-        h3 {
-            color: #FF5722;
-        }
+h3 {
+    color: #FF5722;
+}
 
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
+ul {
+    list-style-type: none;
+    padding: 0;
+}
 
-        ul li {
-            padding: 5px;
-            background-color: #e0e0e0;
-            border-radius: 3px;
-            margin-bottom: 5px;
-        }
+ul li {
+    padding: 5px;
+    background-color: #e0e0e0;
+    border-radius: 3px;
+    margin-bottom: 5px;
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-            background-color: #fff;
-        }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: #fff;
+}
 
-        table th, table td {
-            padding: 10px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
+table th, table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
 
-        table th {
-            background-color: #4CAF50;
-            color: white;
-        }
+table th {
+    background-color: #4CAF50;
+    color: white;
+}
 
-        table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
 
-        table tr:hover {
-            background-color: #f1f1f1;
-        }
+table tr:hover {
+    background-color: #f1f1f1;
+}
 
-        #scores-result, #category-result {
-            margin-top: 20px;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
+#scores-result, #category-result {
+    margin-top: 20px;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
 
-        p {
-            margin: 5px 0;
-        }
+p {
+    margin: 5px 0;
+}
 
-        #getCompletedGamesButton {
-            margin-bottom: 15px;
-        }
+#dice-images {
+    display: flex;
+    gap: 10px; /* Add space between the dice images */
+    margin-top: 15px;
+}
+
+#dice-images img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain; /* Ensures the images don’t stretch */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+    padding: 5px;
+}
+
+#getCompletedGamesButton {
+    margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+    /* Adjust image size and layout for smaller screens */
+    #dice-images img {
+        width: 40px;
+        height: 40px;
+    }
+}
     </style>
 </head>
 <body>
@@ -139,17 +163,34 @@
     <input type="text" id="roll-token" name="token" required hidden>
     <button type="submit">Roll Dice</button>
 </form>
-<h3>Dice Values:</h3>
-<ul id="dice-values">
-    <!-- Dice values will be dynamically inserted here as <li> elements -->
-</ul>
-
+<div id="dice-images">
+    <!-- Dice images will be dynamically inserted here -->
+</div>
 <!-- Calculate Score by Category Form -->
 <h2>Calculate Score by Category</h2>
 <form id="category-form">
     <input type="text" id="category-token" name="token" required hidden>
-    <label for="category">Enter Category:</label>
-    <input type="number" id="category" name="category" required min="1" max="14">
+    <label for="category">Choose Category:</label>
+
+    <!-- Select element for predefined categories -->
+    <select id="category" name="category" required>
+        <option value="" disabled selected>Select a category</option> <!-- Placeholder option -->
+        <option value="1">Ones</option>
+        <option value="2">Twos</option>
+        <option value="3">Threes</option>
+        <option value="4">Fours</option>
+        <option value="5">Fives</option>
+        <option value="6">Sixes</option>
+        <option value="7">doubleSix</option>
+        <option value="8">doubleSixDoubleFive</option>
+        <option value="9">tripleSix</option>
+        <option value="10">quadFives</option>
+        <option value="11">smallStraight</option>
+        <option value="12">largeStraight</option>
+        <option value="13">tripleFiveDoubleSix</option>
+        <option value="14">yatzy</option>
+    </select>
+
     <button type="submit">Get Score</button>
 </form>
 <div id="category-result">
@@ -160,9 +201,8 @@
 <!-- Scores Form -->
 <h2>View Scores</h2>
 <form id="scores-form">
-    <label for="scores-token">Enter Token:</label>
-    <input type="text" id="scores-token" name="token" required>
-    <button type="submit">Get Scores</button>
+    <input type="text" id="scores-token" name="token" required hidden>
+    <button type="button" id="viewScoresButton" style="display: none;">View Scores</button>
 </form>
 <div id="scores-result">
     <h3>Scores</h3>
