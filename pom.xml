@@ -12,6 +12,7 @@
 	<artifactId>yatzysimulator</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>yatzysimulator</name>
+	<packaging>jar</packaging> <!-- Add this line to specify packaging as a JAR -->
 	<description>Demo project for simulating yatzy</description>
 	<url/>
 	<licenses>

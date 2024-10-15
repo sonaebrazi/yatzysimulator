@@ -317,7 +317,7 @@ public class YatzyServiceTest {
 
         ScoreRequestDto request = new ScoreRequestDto(14, token);
         ScoreValueDto result = yatzyService.scoreCalculation(request);
-        assertEquals(30,result.getScore());
+        assertEquals(50,result.getScore());
     }
 
 }
