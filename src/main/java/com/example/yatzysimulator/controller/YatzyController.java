@@ -1,12 +1,9 @@
 package com.example.yatzysimulator.controller;
 
-import com.example.yatzysimulator.dto.ScoreRequest;
+import com.example.yatzysimulator.dto.*;
 import com.example.yatzysimulator.service.YatzyService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -15,15 +12,28 @@ public class YatzyController {
     @Autowired
     private YatzyService service;
 
-    @GetMapping("roll")
-    public List<Integer> roll(){
-        return service.rollDice();
+    @GetMapping("start-game/{name}")
+    public @ResponseBody StartGameDto startGame(@PathVariable String name){
+        return service.createPlayer(name);
     }
-    @PostMapping("roll")
-    public int scoreCalculation(@RequestBody ScoreRequest request){
+
+    @GetMapping("roll-dice/{token}")
+    public @ResponseBody DiceResponseDto rollDice(@PathVariable String token){
+        return service.rollDice(token);
+    }
+
+    @PostMapping("calculation")
+    public ScoreValueDto scoreCalculation(@RequestBody ScoreRequestDto request){
        return service.scoreCalculation(request);
-
     }
 
+    @GetMapping("scores/{token}")
+    public @ResponseBody ScoreResponseDto getScores(@PathVariable String token){
+        return service.getScore(token);
+    }
 
+    @GetMapping("completed-games")
+    public @ResponseBody List<PlayerTotalScoreDto> getCompletedGames(){
+        return service.findCompletedGames();
+    }
 }

@@ -1,22 +1,37 @@
 package com.example.yatzysimulator.service;
 
-import com.example.yatzysimulator.dto.ScoreRequest;
-import com.sun.source.tree.BreakTree;
-import org.apache.tomcat.util.collections.CaseInsensitiveKeyMap;
+import com.example.yatzysimulator.dto.*;
+import com.example.yatzysimulator.entity.CategoryScores;
+import com.example.yatzysimulator.entity.DiceValue;
+import com.example.yatzysimulator.entity.Player;
+import com.example.yatzysimulator.repository.CategoryScoreRepository;
+import com.example.yatzysimulator.repository.DiceRollRepository;
+import com.example.yatzysimulator.repository.PlayerRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class YatzyService {
+    @Autowired
+    private DiceRollRepository diceRepo;
+
+    @Autowired
+    private CategoryScoreRepository scoreRepo;
+
+    @Autowired
+    private PlayerRepository playerRepo;
 
     private final int numOfDices = 5;
     private Random random = new Random();
 
-    public List<Integer> rollDice() {
+    public DiceResponseDto rollDice(String token) {
+        List<DiceValue> foundRolls = diceRepo.findByTokenAndCategoryIsNull(token);
+        if (foundRolls.size()>1) {
+            throw new IllegalArgumentException("more than one category is null");
+        }
 
         List<Integer> diceRolls = new ArrayList<>();
         for (int i = 0; i < numOfDices; i++) {
@@ -24,13 +39,65 @@ public class YatzyService {
             diceRolls.add(diceNum);
         }
 
-        return diceRolls;
+        DiceValue diceValues = new DiceValue(
+                null,
+                diceRolls.get(0),
+                diceRolls.get(1),
+                diceRolls.get(2),
+                diceRolls.get(3),
+                diceRolls.get(4),
+                token,
+                null
+        );
+        diceRepo.save(diceValues);
+        DiceResponseDto diceResponse = new DiceResponseDto(diceRolls, token);
+        return diceResponse;
     }
 
-    public int scoreCalculation(ScoreRequest request) {
+    public ScoreValueDto scoreCalculation(ScoreRequestDto request) {
 
-        List<Integer> rolls = request.getRollDices();
+        //extract category and score from the request
         int category = request.getCategory();
+        String token = request.getToken();
+
+        //check if the category-score table has been filled for the given token
+        CategoryScores existingScore=scoreRepo.findByTokenAndCategory(token,category);
+        if(existingScore != null){
+            throw new IllegalArgumentException("category "+category+" is filled already with the score");
+        }
+
+        //find rolls that have null category in dice-roll table
+        List<DiceValue> foundRolls = diceRepo.findByTokenAndCategoryIsNull(token);
+        if (foundRolls.size()== 0) {
+            throw new IllegalArgumentException("no dice rolls found for token or category");
+        }else if(foundRolls.size()>1){
+            throw new IllegalArgumentException("multiple null categories!");
+        }
+        //saving category in roll-dice table
+        DiceValue rolls = foundRolls.get(0);
+        setCategory(rolls,category, token);
+
+        // Extract the DiceValues to use for score calculation
+        List<Integer> diceValueList = new ArrayList<>();
+        diceValueList.add(rolls.getDice1());
+        diceValueList.add(rolls.getDice2());
+        diceValueList.add(rolls.getDice3());
+        diceValueList.add(rolls.getDice4());
+        diceValueList.add(rolls.getDice5());
+        
+        //Calculate score based on the provided category
+        int score = calculateScoreForCategory(category, diceValueList);
+
+        //Save the score
+        CategoryScores scores = new CategoryScores(null, category, token, score);
+        scoreRepo.save(scores);
+
+        // Return the score as a DTO
+        return new ScoreValueDto(score);
+    }
+
+    private int calculateScoreForCategory(int category, List<Integer> diceValueList) {
+        int score = 0;
         switch (category) {
             case 1:
             case 2:
@@ -40,138 +107,134 @@ public class YatzyService {
             case 6:
                 int count = 0;
                 for (int i = 0; i < numOfDices; i++) {
-                    if (rolls.get(i) == category) count++;
+                    if (diceValueList.get(i) == category) count++;
                 }
-                return count * category;
+                score = count * category;
+                break;
             case 7:
-                return doubleSix(rolls);
+                score = doubleSix(diceValueList);
+                break;
             case 8:
-                return doubleSixDoubleFive(rolls);
+                score = doubleSixDoubleFive(diceValueList);
+                break;
             case 9:
-                return tripleSix(rolls);
+                score = tripleSix(diceValueList);
+                break;
             case 10:
-                return quadFives(rolls);
+                score = quadFives(diceValueList);
+                break;
             case 11:
-                return smallStraight(rolls);
+                score = smallStraight(diceValueList);
+                break;
             case 12:
-                return largeStraight(rolls);
+                score = largeStraight(diceValueList);
+                break;
             case 13:
-                return tripleFiveDoubleSix(rolls);
+                score = tripleFiveDoubleSix(diceValueList);
+                break;
             case 14:
-                return yatzy(rolls);
+                score = yatzy(diceValueList);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid category: " + category);
         }
-
-        return 0;
+        return score;
     }
 
-    private int yatzy(List<Integer> rolls) {
-        int checker = rolls.get(0);
-        for (int i=1; i<numOfDices;i++){
-            if(rolls.get(i)!= checker){
-                return 0;
-            }
-        }
-        return  50;
+    private int yatzy(List<Integer> values) {
+        int checker = values.get(0);
+        boolean allSame = values.stream()
+                .allMatch(value -> value==checker);
+        return allSame ? 50 : 0;
     }
 
-    private int largeStraight(List<Integer> rolls) {
-        rolls.sort(Comparator.naturalOrder());
-        for(int i=0;i<numOfDices; i++){
-            if(rolls.get(i)!= i+2){
-                return 0;}
-        }
-        return 50;
+    private int largeStraight(List<Integer> values) {
+        List<Integer> largeStraight = Arrays.asList(2,3,4,5,6);
+        List<Integer> sortedValues= values.stream()
+                .sorted()
+                .collect(Collectors.toList());
+                return sortedValues.equals(largeStraight) ? 50 : 0;
     }
 
-    private int smallStraight(List<Integer> rolls) {
-        rolls.sort(Comparator.naturalOrder());
-        for(int i=0;i<numOfDices; i++){
-            if(rolls.get(i)!= i+1){
-                return 0;}
-        }
-        return 45;
+    private int smallStraight(List<Integer> values) {
+        List<Integer> smallStraight = Arrays.asList(1,2,3,4,5);
+        List<Integer> sortedValues= values.stream()
+                .sorted()
+                .collect(Collectors.toList());
+        return sortedValues.equals(smallStraight) ? 45 : 0;
     }
 
-    private int tripleFiveDoubleSix(List<Integer> rolls) {
-        int counter5 = 0;
-        int counter6 = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            int dice = rolls.get(i);
-            if (dice == 6 && counter6 < 2) {
-                counter6++;
-            } else if (dice == 5 && (counter5 < 3)) {
-                counter5++;
-
-            }
-        }
-
-        if (counter6 == 2 && counter5 == 3) {
-            return 27;
-        } else return 0;
+    private int tripleFiveDoubleSix(List<Integer> values) {
+        long count5 = values.stream()
+                .filter(value -> value==5)
+                .count();
+        long count6 = values.stream()
+                .filter(value -> value==6)
+                .count();
+        return (count5==3 && count6==2) ? 27 : 0;
     }
 
-    private int quadFives(List<Integer> rolls) {
-        int counter = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            if (rolls.get(i) == 5) {
-                counter++;
-                if (counter == 4) {
-                    return 20;
-                }
-            }
-        }
-        return 0;
+    private int quadFives(List<Integer> values) {
+        long count = values.stream()
+                .filter(value -> value==5)
+                .count();
+        return count>=4 ? 20 : 0;
     }
 
-    private int tripleSix(List<Integer> rolls) {
-            int counter = 0;
-            for (int i = 0; i < numOfDices; i++) {
-                if (rolls.get(i) == 6) {
-                    counter++;
-                    if (counter == 3) {
-                        return 18;
-                    }
-                }
-            }
-            return 0;
-        }
-
-
-
-    private int doubleSixDoubleFive(List<Integer> rolls) {
-        int counter5 = 0;
-        int counter6 = 0;
-        int sum = 0;
-        for (int i = 0; i < numOfDices; i++) {
-
-            int dice = rolls.get(i);
-            if (dice == 6 && counter6 < 2) {
-                counter6++;
-            } else if (dice == 5 && (counter5 < 2)) {
-                counter5++;
-
-            }
-        }
-
-        System.out.println(counter6);
-        System.out.println(counter5);
-        if (counter6 == 2 && counter5 == 2) {
-            return 22;
-        } else return 0;
-
+    private int tripleSix(List<Integer> values) {
+        long count = values.stream()
+                .filter(value -> value==6)
+                .count();
+        return count>=3 ? 18 : 0;
     }
 
-    private int doubleSix(List<Integer> rolls) {
-        int counter = 0;
-        for (int i = 0; i < numOfDices; i++) {
-            if (rolls.get(i) == 6) {
-                counter++;
-                if (counter == 2) {
-                    return 12;
-                }
-            }
-        }
-        return 0;
+    private int doubleSixDoubleFive(List<Integer> values) {
+        long count6=values.stream()
+                .filter(value -> value ==6)
+                .count();
+        long count5=values.stream()
+                .filter(value -> value ==5)
+                .count();
+        return (count5>= 2 && count6>=2) ? 22 : 0;
     }
+
+    private int doubleSix(List<Integer> values) {
+        long count = values.stream()
+                .filter(value -> value==6)
+                .count();
+        return count>=2 ? 12 : 0;
+    }
+
+    public ScoreResponseDto getScore(String token) {
+        int totalScore=0;
+        List<CategoryScoreDto> result = new ArrayList<>();
+        List<CategoryScores> categoryScoresList = scoreRepo.findByToken(token);
+        for (CategoryScores c : categoryScoresList) {
+            result.add(new CategoryScoreDto(c.getCategory(), c.getScore()));
+            totalScore=totalScore+(c.getScore());
+        }
+        return (new ScoreResponseDto(result,totalScore));
+    }
+
+    public List<PlayerTotalScoreDto> findCompletedGames() {
+        List<PlayerTotalScoreDto>  comletedGame= scoreRepo.findPlayersWith14Rolls();
+        return comletedGame;
+    }
+
+    public StartGameDto createPlayer(String name) {
+        String token = UUID.randomUUID().toString();
+        Player player= new Player();
+        player.setToken(token);
+        player.setName(name);
+        playerRepo.save(player);
+        return new StartGameDto(token);
+    }
+
+    public void setCategory(DiceValue rolls,int category,String token){
+        rolls.setCategory(category);
+        diceRepo.save(rolls);
+    }
+
+
 }
 
